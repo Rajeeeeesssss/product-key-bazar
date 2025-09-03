@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, FormEvent, useMemo } from "react";
 import { getProducts, addProduct as addProductService, deleteProduct as deleteProductService, updateProduct } from "@/services/productService";
-import { getUsers, updateUser } from "@/services/userService";
+import { getUsers, updateUser, deleteUser as deleteUserService } from "@/services/userService";
 import { getAllOrders, updateOrderStatus } from "@/services/orderService";
 import type { Product, User, Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 
 type SalesData = { month: string; sales: number };
 type CategoryData = { name: string; value: number };
@@ -272,6 +274,17 @@ function AdminDashboard() {
     }
   };
 
+  const handleDeleteUser = async (uid: string) => {
+    try {
+      await deleteUserService(uid);
+      toast({ title: "Success", description: "User deleted successfully." });
+      fetchUsers(); // Refresh users list
+    } catch (error) {
+      console.error("Error deleting user: ", error);
+      toast({ title: "Error", description: "Failed to delete user.", variant: "destructive" });
+    }
+  }
+
   const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
         await updateOrderStatus(orderId, status);
@@ -484,38 +497,37 @@ function AdminDashboard() {
               <CardDescription>View and manage customer orders.</CardDescription>
             </CardHeader>
             <CardContent>
-               <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Update Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingOrders ? (
-                         Array.from({length: 5}).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                            </TableRow>
-                        ))
-                    ) : orders.map(order => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.customerInfo.name}</TableCell>
-                        <TableCell>{format(new Date(order.createdAt), "PPP")}</TableCell>
-                        <TableCell>${order.total.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                           <Select onValueChange={(value: Order['status']) => handleUpdateOrderStatus(order.id, value)} defaultValue={order.status}>
-                              <SelectTrigger className="w-[180px]">
+              {loadingOrders ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                </div>
+              ) : (
+                <Accordion type="single" collapsible className="w-full space-y-4">
+                  {orders.map(order => (
+                    <AccordionItem value={order.id} key={order.id} className="border rounded-lg">
+                      <div className="flex items-center p-4">
+                        <AccordionTrigger className="flex-1 hover:no-underline p-0">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center flex-1 text-sm text-left">
+                            <div>
+                               <p className="text-xs text-muted-foreground">Customer</p>
+                               <p className="font-medium truncate">{order.customerInfo.name}</p>
+                            </div>
+                             <div>
+                                <p className="text-xs text-muted-foreground">Date</p>
+                                <p className="font-medium">{format(new Date(order.createdAt), "PPP")}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground">Total</p>
+                                <p className="font-medium">${order.total.toFixed(2)}</p>
+                            </div>
+                             <div className="flex justify-start">
+                                <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+                            </div>
+                          </div>
+                       </AccordionTrigger>
+                       <div className="flex items-center gap-4 ml-auto pl-4">
+                          <Select onValueChange={(value: Order['status']) => handleUpdateOrderStatus(order.id, value)} defaultValue={order.status}>
+                              <SelectTrigger className="w-[180px] hidden md:flex">
                                 <SelectValue placeholder="Update status" />
                               </SelectTrigger>
                               <SelectContent>
@@ -526,11 +538,53 @@ function AdminDashboard() {
                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
                               </SelectContent>
                             </Select>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                       </div>
+                      </div>
+                       <AccordionContent className="p-4 pt-0">
+                          <Separator className="mb-4" />
+                          <h4 className="font-semibold mb-2">Order Items</h4>
+                          <Table>
+                             <TableHeader>
+                                <TableRow>
+                                <TableHead>Product</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead className="text-right">Price</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {order.items.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>
+                                    <div className="flex items-center gap-4">
+                                        <Image src={item.image} alt={item.name} width={40} height={40} className="rounded-md" data-ai-hint="product image"/>
+                                        <span className="font-medium">{item.name}</span>
+                                    </div>
+                                    </TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                          <div className="flex md:hidden justify-end mt-4">
+                            <Select onValueChange={(value: Order['status']) => handleUpdateOrderStatus(order.id, value)} defaultValue={order.status}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Update status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                                  <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                  <SelectItem value="Shipped">Shipped</SelectItem>
+                                  <SelectItem value="Delivered">Delivered</SelectItem>
+                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                          </div>
+                       </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -557,13 +611,15 @@ function AdminDashboard() {
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingUsers ? (
                     Array.from({length: 3}).map((_, i) => (
                         <TableRow key={i}>
+                            <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                             <TableCell><Skeleton className="h-10 w-full" /></TableCell>
@@ -580,11 +636,32 @@ function AdminDashboard() {
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell><Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
-                      <TableCell className="text-right">
-                         <div className="flex items-center justify-end gap-2">
-                            <span>{user.disabled ? 'Blocked' : 'Active'}</span>
-                            <Switch checked={!user.disabled} onCheckedChange={() => handleToggleUserStatus(user.uid, user.disabled)} />
+                      <TableCell>
+                         <div className="flex items-center justify-start gap-2">
+                            <Switch checked={!user.disabled} onCheckedChange={() => handleToggleUserStatus(user.uid, user.disabled)} id={`status-${user.uid}`} />
+                            <label htmlFor={`status-${user.uid}`}>{user.disabled ? 'Blocked' : 'Active'}</label>
                          </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive" disabled={user.role === 'admin'}>
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete this user and all their data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteUser(user.uid)}>Continue</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -788,3 +865,5 @@ export default function AdminPage() {
     
     return <AdminDashboard />;
 }
+
+    
