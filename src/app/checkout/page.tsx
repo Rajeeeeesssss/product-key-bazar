@@ -20,6 +20,7 @@ import { createOrder } from "@/services/orderService"
 const checkoutSchema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email(),
+  phone: z.string().min(10, "Phone No is required"),
   address: z.string().min(5, "Address is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
@@ -39,6 +40,7 @@ export default function CheckoutPage() {
     defaultValues: {
       name: "",
       email: "",
+      phone: "",
       address: "",
       city: "",
       state: "",
@@ -122,6 +124,13 @@ export default function CheckoutPage() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={form.control} name="phone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input type="tel" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
