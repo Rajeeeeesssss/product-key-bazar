@@ -129,7 +129,7 @@ export default function CheckoutPage() {
                   )} />
                    <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Phone No</FormLabel>
                       <FormControl><Input type="tel" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
