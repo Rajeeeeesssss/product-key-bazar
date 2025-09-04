@@ -76,16 +76,14 @@ function AdminDashboard() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isUpdatingProduct, setIsUpdatingProduct] = useState(false);
-  const [productCategories, setProductCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState('');
+  const [productCategories] = useState<string[]>(['Electronics', 'Fashion', 'Home Goods', 'Beauty']);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
 
 
   const fetchProducts = async () => {
       setLoadingProducts(true);
       const products = await getProducts();
       setAllProducts(products);
-      const categories = [...new Set(products.map(p => p.category))].filter(c => c); // Filter out empty strings
-      setProductCategories(categories);
       setLoadingProducts(false);
   };
   
@@ -102,6 +100,7 @@ function AdminDashboard() {
     setOrders(fetchedOrders);
     setLoadingOrders(false);
   }
+
 
   useEffect(() => {
     fetchProducts();
@@ -180,6 +179,11 @@ function AdminDashboard() {
     let categoryValue = formData.get('category') as string;
     if (categoryValue === 'other') {
         categoryValue = formData.get('newCategory') as string;
+        if (!categoryValue || categoryValue.trim() === '') {
+            toast({ title: "Error", description: "Please enter a name for the new category.", variant: "destructive" });
+            setIsAddingProduct(false);
+            return;
+        }
     }
     
     try {
@@ -199,7 +203,7 @@ function AdminDashboard() {
         toast({ title: "Success", description: "Product added successfully." });
         fetchProducts(); // Refresh products list
         (e.target as HTMLFormElement).reset();
-        setNewCategory('');
+        setShowNewCategoryInput(false);
     } catch(error) {
         console.error("Error adding product: ", error);
         toast({ title: "Error", description: "Failed to add product.", variant: "destructive" });
@@ -229,11 +233,21 @@ function AdminDashboard() {
     const imageId = getGoogleDriveImageId(gDriveLink);
     const directImageUrl = imageId ? `https://drive.google.com/uc?export=view&id=${imageId}` : editingProduct.image;
     
+    let categoryValue = formData.get('category') as string;
+    if (categoryValue === 'other') {
+        categoryValue = formData.get('newCategory') as string;
+        if (!categoryValue || categoryValue.trim() === '') {
+            toast({ title: "Error", description: "Please enter a name for the new category.", variant: "destructive" });
+            setIsUpdatingProduct(false);
+            return;
+        }
+    }
+
     try {
         const updatedData: Partial<Product> = {
           name: formData.get('name') as string,
           price: Number(formData.get('price')),
-          category: formData.get('category') as string,
+          category: categoryValue,
           description: formData.get('description') as string,
           image: directImageUrl,
           images: [directImageUrl, directImageUrl],
@@ -244,6 +258,7 @@ function AdminDashboard() {
         toast({ title: "Success", description: "Product updated successfully." });
         fetchProducts();
         setEditingProduct(null);
+        setShowNewCategoryInput(false);
     } catch (error) {
       console.error("Error updating product:", error);
       toast({ title: "Error", description: "Failed to update product.", variant: "destructive" });
@@ -306,6 +321,12 @@ function AdminDashboard() {
         default: return 'outline';
     }
   }
+
+  const allPossibleCategories = useMemo(() => {
+    const dynamicCategories = [...new Set(allProducts.map(p => p.category))].filter(c => c && c.trim() !== '');
+    return [...new Set([...productCategories, ...dynamicCategories])];
+  }, [allProducts, productCategories]);
+
 
   const renderProductsTab = (products: Product[], title: string, showToggles: boolean = false) => (
     <Card>
@@ -445,7 +466,7 @@ function AdminDashboard() {
                     </div>
                      <div className="space-y-4 col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Input name="stock" type="number" placeholder="Stock Quantity" required />
-                      <Select name="category" onValueChange={(value) => { if(value !== 'other') setNewCategory(''); }}>
+                      <Select name="category" onValueChange={(value) => setShowNewCategoryInput(value === 'other')}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select or Add Category" />
                           </SelectTrigger>
@@ -455,9 +476,9 @@ function AdminDashboard() {
                           </SelectContent>
                         </Select>
                      </div>
-                     {newCategory !== undefined && (
-                        <div className="col-span-1 md:col-span-2" style={{ display: newCategory === '' ? 'block' : 'none' }}>
-                             <Input name="newCategory" placeholder="Enter New Category Name" onChange={(e) => setNewCategory(e.target.value)} />
+                     {showNewCategoryInput && (
+                        <div className="col-span-1 md:col-span-2">
+                             <Input name="newCategory" placeholder="Enter New Category Name" />
                         </div>
                      )}
 
@@ -811,15 +832,21 @@ function AdminDashboard() {
                     </div>
                      <div>
                         <label>Category</label>
-                        <Select name="category" defaultValue={editingProduct.category}>
+                         <Select name="category" defaultValue={editingProduct.category} onValueChange={(value) => setShowNewCategoryInput(value === 'other')}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Category" />
                             </SelectTrigger>
                             <SelectContent>
-                                {productCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                {allPossibleCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                <SelectItem value="other">Add new category...</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
+                     {showNewCategoryInput && (
+                        <div className="col-span-1 md:col-span-2">
+                             <Input name="newCategory" placeholder="Enter New Category Name" />
+                        </div>
+                     )}
                     <div className="md:col-span-2">
                         <label>Description</label>
                         <Textarea name="description" defaultValue={editingProduct.description} required />
@@ -865,5 +892,6 @@ export default function AdminPage() {
     
     return <AdminDashboard />;
 }
+
 
     
