@@ -39,7 +39,7 @@ const HeroSection = () => (
         </div>
         <div className="relative h-64 md:h-96 lg:h-full">
           <Image
-            src="https://placehold.co/600x400.png"
+            src="https://picsum.photos/600/400"
             alt="Summer collection"
             layout="fill"
             objectFit="cover"
@@ -53,10 +53,10 @@ const HeroSection = () => (
 );
 
 const categories = [
-  { name: 'Electronics', href: '/products?category=electronics', image: 'https://placehold.co/400x300.png', hint: 'modern gadgets' },
-  { name: 'Fashion', href: '/products?category=fashion', image: 'https://placehold.co/400x300.png', hint: 'stylish clothing' },
-  { name: 'Home Goods', href: '/products?category=home', image: 'https://placehold.co/400x300.png', hint: 'cozy interior' },
-  { name: 'Beauty', href: '/products?category=beauty', image: 'https://placehold.co/400x300.png', hint: 'cosmetics products' },
+  { name: 'Electronics', href: '/products?category=electronics', image: 'https://picsum.photos/400/300', hint: 'modern gadgets' },
+  { name: 'Fashion', href: '/products?category=fashion', image: 'https://picsum.photos/400/300', hint: 'stylish clothing' },
+  { name: 'Home Goods', href: '/products?category=home', image: 'https://picsum.photos/400/300', hint: 'cozy interior' },
+  { name: 'Beauty', href: '/products?category=beauty', image: 'https://picsum.photos/400/300', hint: 'cosmetics products' },
 ];
 
 const FeaturedCategories = () => (
@@ -153,7 +153,7 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  const featuredProducts = products.filter(p => p.category === 'Fashion').slice(0, 8);
+  const featuredProducts = products.filter(p => p.category === 'windows').slice(0, 8);
   const trendingProducts = products.slice(0, 8);
 
   return (
@@ -168,8 +168,8 @@ export default function Home() {
       <FlashSaleSection />
        <ProductCarousel
         products={featuredProducts}
-        title="New in Fashion"
-        subtitle="The latest styles to keep you ahead of the trend"
+        title="New in Windows"
+        subtitle="The latest software to keep you ahead of the curve"
       />
       <RecentlyViewedProducts />
     </div>
